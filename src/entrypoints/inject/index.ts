@@ -1,6 +1,7 @@
 import { TabFetchOptions } from "@/rpc/types";
 import { VERSION } from "@/utils/consts";
 
+import { AddonCapabilities } from "./capabilities";
 import { AddonClient } from "./client";
 
 type FunctionKeys<T> = {
@@ -19,6 +20,9 @@ function buildAddonEndpoint<T extends FunctionKeys<AddonClient>>(name: T) {
 
 export const Addon = {
   version: VERSION,
+
+  compat: AddonCapabilities,
+  capabilities: AddonCapabilities,
 
   info: buildAddonEndpoint("info"),
   cookiesStatus: buildAddonEndpoint("cookies_status"),
