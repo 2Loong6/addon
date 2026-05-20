@@ -16,23 +16,37 @@ import setCookie from "set-cookie-parser";
 import { rateLimiter } from "@/utils/rate-limit";
 
 // ==========================================================================
+function getHeaderValue(
+  headers: HeadersInit | undefined,
+  name: string,
+): string | undefined {
+  if (!headers) return undefined;
+  return new Headers(headers).get(name) ?? undefined;
+}
+
 export async function http_fetch(
   input: Request | string | URL,
   requestInit?: RequestInit,
 ): Promise<SerializableResponse> {
   const url = extractUrl(input);
+  const userAgent = getHeaderValue(requestInit?.headers, "User-Agent");
+  const viewportWidth = getHeaderValue(requestInit?.headers, "viewport-width");
+
+  const tabId = null;
+  const bypassParams = {
+    requestUrl: url,
+    spoofOrigin: url,
+    userAgent,
+    viewportWidth,
+  };
+
   const release = await rateLimiter.acquire(rateLimiter.urlToKey(url));
   try {
-    const tabId = null;
-    const bypassParams = {
-      requestUrl: url,
-      spoofOrigin: url,
-    };
     await local_install_bypass(tabId, bypassParams);
     const resp = await fetch(input, requestInit);
-    await local_uninstall_bypass(tabId, bypassParams);
     return serializeResponse(resp);
   } finally {
+    await local_uninstall_bypass(tabId, bypassParams);
     await release();
   }
 }
@@ -62,6 +76,10 @@ export async function tab_http_fetch(
   params: Parameters<ClientCmd["tab.http.fetch"]>[0],
 ): Promise<SerializableResponse> {
   const { options, input, requestInit } = params;
+
+  const userAgent = getHeaderValue(requestInit?.headers, "User-Agent");
+  const viewportWidth = getHeaderValue(requestInit?.headers, "viewport-width");
+
   const { tabUrl, forceNewTab } = options;
 
   const url = extractUrl(input);
@@ -69,6 +87,8 @@ export async function tab_http_fetch(
 
   const bypassParams: BypassParams = {
     requestUrl: url,
+    userAgent,
+    viewportWidth,
     // incase of `Referrer Policystrict-origin-when-cross-origin`
     // origin: new URL(tabUrl).origin,
   };
@@ -77,11 +97,8 @@ export async function tab_http_fetch(
     const tab = await tabResMgr.findOrCreateTab(tabUrl, { forceNewTab });
     if (tab.id == null) throw newError(`Tab has no id: ${tab}`);
 
-    let bypassInstalled = false;
     try {
       await local_install_bypass(tab.id, bypassParams);
-      bypassInstalled = true;
-
       // NOTE(kuriko): 在 tab 上面直接执行 fetch，一般不用考虑 CORS bypass 问题。
       const respSer = await browserRemoteExecution({
         target: { tabId: tab.id },
@@ -161,13 +178,7 @@ export async function tab_http_fetch(
       });
       return respSer;
     } finally {
-      if (bypassInstalled) {
-        try {
-          await local_uninstall_bypass(tab.id, bypassParams);
-        } catch (e) {
-          debugLog.warn("failed to uninstall bypass in tab_http_fetch", e);
-        }
-      }
+      await local_uninstall_bypass(tab.id, bypassParams);
       await tabResMgr.releaseTab(tab.id);
     }
   } finally {
@@ -345,7 +356,13 @@ export async function local_install_bypass(
     if (!tabUrl) throw newError(`Tab has no url: ${tab}`);
     promises.push(installCORSRules(tabId, tabUrl));
   }
-  promises.push(installSpoofRules(tabId, requestUrl, _origin, _referer));
+  promises.push(
+    installSpoofRules(tabId, {
+      ...bypassParams,
+      origin: _origin,
+      referer: _referer,
+    }),
+  );
   await Promise.all(promises);
 }
 
@@ -357,7 +374,13 @@ export async function local_uninstall_bypass(
   const _origin = origin ?? new URL(requestUrl).origin;
   const _referer = referer ?? _origin + "/";
 
-  const promises = [uninstallSpoofRules(tabId, requestUrl, _origin, _referer)];
+  const promises = [
+    uninstallSpoofRules(tabId, {
+      ...bypassParams,
+      origin: _origin,
+      referer: _referer,
+    }),
+  ];
   if (tabId) {
     const tab = await browser.tabs.get(tabId);
     const tabUrl = tab.url ?? tab.pendingUrl;

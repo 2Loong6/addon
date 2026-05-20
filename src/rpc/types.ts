@@ -170,6 +170,8 @@ export type BypassParams = {
   spoofOrigin?: string;
   origin?: string;
   referer?: string;
+  userAgent?: string;
+  viewportWidth?: string;
 };
 
 export type TabFetchOptions = {
@@ -185,15 +187,7 @@ export type ClientCmd = {
   "base.ping"(): Promise<string>;
   "base.info"(): Promise<InfoResult>;
 
-  "local.bypass.enable"(
-    params: {
-      requestUrl: string;
-      origin?: string;
-      referer?: string;
-    },
-    env: EnvType,
-  ): Promise<void>;
-
+  "local.bypass.enable"(params: BypassParams, env: EnvType): Promise<void>;
   "local.bypass.disable"(params: BypassParams, env: EnvType): Promise<void>;
 
   "http.fetch"(

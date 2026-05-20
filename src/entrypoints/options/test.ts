@@ -6,25 +6,45 @@ export interface TestCase {
   test: () => Promise<boolean>;
 }
 
-function httpFetchCase(url: string, content: string) {
+function httpFetchCase(
+  name: string,
+  url: string,
+  content: string,
+  userAgent?: string,
+) {
   return {
-    name: `http_fetch ${url}`,
+    name: `${name} || ${url}`,
     status: null,
     test: async () => {
-      const resp = await Api.http_fetch(url, {});
+      const resp = await Api.http_fetch(url, {
+        headers: {
+          "User-Agent": userAgent ?? navigator.userAgent,
+        },
+      });
       return resp.status === 200 && resp.body.includes(content);
     },
   } as TestCase;
 }
 
-function tabHttpFetchCase(tabUrl: string, url: string, content: string) {
+function tabHttpFetchCase(
+  name: string,
+  tabUrl: string,
+  url: string,
+  content: string,
+  userAgent?: string,
+) {
   return {
-    name: `tab_http_fetch ${url}`,
+    name: `${name} || ${url}`,
     status: null,
     test: async () => {
       const resp = await Api.tab_http_fetch({
         options: { tabUrl },
         input: url,
+        requestInit: {
+          headers: {
+            "User-Agent": userAgent ?? navigator.userAgent,
+          },
+        },
       });
       return resp.status === 200 && resp.body.includes(content);
     },

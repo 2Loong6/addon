@@ -1,24 +1,35 @@
 import { hashStringToInt } from "@/utils/tools";
 import { rulesMgr } from "@/utils/resource";
+import { BypassParams } from "@/rpc/types";
 
 function spoofRulesKey(
   tabId: number,
-  requestUrl: string,
-  origin: string,
-  referer: string,
+  bypassParams: BypassParams & { origin: string; referer: string },
 ) {
-  return hashStringToInt(`${tabId}_${requestUrl}_${origin}_${referer}`);
+  const tag = Object.entries(bypassParams)
+    .filter(([, value]) => value !== undefined)
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([key, value]) => `${JSON.stringify(key)}:${JSON.stringify(value)}`)
+    .join(",");
+  return hashStringToInt(`spoof_${tabId}_${tag}`);
 }
 
-export function spoofRulesBuilder(
-  tabId: number | null,
-  requestUrl: string,
-  origin: string,
-  referer: string,
-  resourceTypes: string[] = ["xmlhttprequest", "csp_report", "main_frame"],
-  extraCondition: Browser.declarativeNetRequest.RuleCondition = {},
-): any[] {
-  let idx = spoofRulesKey(tabId ?? -1, requestUrl, origin, referer);
+export type SpoofRulesBuilderParams = {
+  tabId: number | null;
+  bypassParams: BypassParams & { origin: string; referer: string };
+  resourceTypes?: string[];
+  extraCondition?: Browser.declarativeNetRequest.RuleCondition;
+};
+
+export function spoofRulesBuilder({
+  tabId,
+  bypassParams,
+  resourceTypes = ["xmlhttprequest", "csp_report", "main_frame"],
+  extraCondition = {},
+}: SpoofRulesBuilderParams): any[] {
+  const { requestUrl, origin, referer, userAgent, viewportWidth } =
+    bypassParams;
+  let idx = spoofRulesKey(tabId ?? -1, bypassParams);
   debugLog("Building spoof rules for", {
     idx,
     url: requestUrl,
@@ -26,6 +37,14 @@ export function spoofRulesBuilder(
     referer,
   });
   const filter = new URL(requestUrl).origin;
+
+  const viewportWidthRule = viewportWidth
+    ? [{ header: "viewport-width", operation: "set", value: viewportWidth }]
+    : [];
+  const userAgentRule = userAgent
+    ? [{ header: "User-Agent", operation: "set", value: userAgent }]
+    : [];
+
   return [
     {
       id: idx++,
@@ -35,6 +54,8 @@ export function spoofRulesBuilder(
         requestHeaders: [
           { header: "Origin", operation: "set", value: origin },
           { header: "Referer", operation: "set", value: referer },
+          ...userAgentRule,
+          ...viewportWidthRule,
         ],
       },
       condition: {
@@ -48,7 +69,7 @@ export function spoofRulesBuilder(
 }
 
 function corsRulesKey(tabId: number, initiatorUrl: string) {
-  return hashStringToInt(`${tabId}_${initiatorUrl}`);
+  return hashStringToInt(`cors_${tabId}_${initiatorUrl}`);
 }
 
 function corsRulesBuilder(tabId: number, initiatorUrl: string): any[] {
@@ -133,22 +154,24 @@ function corsRulesBuilder(tabId: number, initiatorUrl: string): any[] {
 
 export async function installSpoofRules(
   tabId: number | null,
-  requestUrl: string,
-  origin: string,
-  referer: string,
+  bypassParams: BypassParams & { origin: string; referer: string },
 ) {
-  const rules = spoofRulesBuilder(tabId, requestUrl, origin, referer);
+  const rules = spoofRulesBuilder({
+    tabId,
+    bypassParams,
+  });
   debugLog("Add spoof rules: ", rules);
   await rulesMgr.add(rules);
 }
 
 export async function uninstallSpoofRules(
   tabId: number | null,
-  requestUrl: string,
-  origin: string,
-  referer: string,
+  bypassParams: BypassParams & { origin: string; referer: string },
 ) {
-  const rules = spoofRulesBuilder(tabId, requestUrl, origin, referer);
+  const rules = spoofRulesBuilder({
+    tabId,
+    bypassParams,
+  });
   debugLog("Remove spoof rules: ", rules);
   await rulesMgr.remove(rules);
 }
