@@ -220,7 +220,19 @@ export async function cookies_status(
   params: Parameters<ClientCmd["cookies.status"]>[0],
 ): Promise<Record<string, CookieStatus | null>> {
   const { url, domain, partitionKey, keys } = params;
-  const cookies = await browser.cookies.getAll({ url, domain, partitionKey });
+
+  const cookiesGetAllSafeParams = { url, domain };
+  let cookies: Browser.cookies.Cookie[];
+  try {
+    cookies = await browser.cookies.getAll({
+      ...cookiesGetAllSafeParams,
+      ...(partitionKey ? { partitionKey } : {}),
+    });
+  } catch (e) {
+    // Use safe version of cookiesGetAllParams.
+    cookies = await browser.cookies.getAll(cookiesGetAllSafeParams);
+  }
+
   const ret: Awaited<ReturnType<ClientCmd["cookies.status"]>> = {};
   if (keys === "*") {
     for (const cookie of cookies) {
