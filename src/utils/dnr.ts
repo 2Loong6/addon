@@ -27,14 +27,8 @@ export function spoofRulesBuilder({
   resourceTypes = ["xmlhttprequest", "csp_report", "main_frame"],
   extraCondition = {},
 }: SpoofRulesBuilderParams): any[] {
-  const {
-    requestUrl,
-    origin,
-    referer,
-    userAgent,
-    viewportWidth,
-    acceptLanguage,
-  } = bypassParams;
+  const { requestUrl, origin, referer, userAgent, viewportWidth } =
+    bypassParams;
   let idx = spoofRulesKey(tabId ?? -1, bypassParams);
   debugLog("Building spoof rules for", {
     idx,
@@ -50,9 +44,6 @@ export function spoofRulesBuilder({
   const userAgentRule = userAgent
     ? [{ header: "User-Agent", operation: "set", value: userAgent }]
     : [];
-  const acceptLanguageRule = acceptLanguage
-    ? [{ header: "accept-language", operation: "set", value: acceptLanguage }]
-    : [];
 
   return [
     {
@@ -65,7 +56,6 @@ export function spoofRulesBuilder({
           { header: "Referer", operation: "set", value: referer },
           ...userAgentRule,
           ...viewportWidthRule,
-          ...acceptLanguageRule,
         ],
       },
       condition: {

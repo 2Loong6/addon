@@ -31,10 +31,6 @@ export async function http_fetch(
   const url = extractUrl(input);
   const userAgent = getHeaderValue(requestInit?.headers, "User-Agent");
   const viewportWidth = getHeaderValue(requestInit?.headers, "viewport-width");
-  const acceptLanguage = getHeaderValue(
-    requestInit?.headers,
-    "accept-language",
-  );
 
   const tabId = null;
   const bypassParams = {
@@ -42,7 +38,6 @@ export async function http_fetch(
     spoofOrigin: url,
     userAgent,
     viewportWidth,
-    acceptLanguage,
   };
 
   const release = await rateLimiter.acquire(rateLimiter.urlToKey(url));
@@ -56,6 +51,27 @@ export async function http_fetch(
   }
 }
 
+export async function tab_dom_querySelectorAll(
+  params: Parameters<ClientCmd["tab.dom.querySelectorAll"]>[0],
+): Promise<string[]> {
+  const { url, selector } = params;
+  const tab = await tabResMgr.findOrCreateTab(url);
+  try {
+    const results = await browserRemoteExecution({
+      target: { tabId: tab.id! },
+      func: (sel: string) => {
+        const elements = document.querySelectorAll(sel);
+        const texts: string[] = Array.from(elements).map((el) => el.outerHTML);
+        return texts;
+      },
+      args: [selector],
+    });
+    return results;
+  } finally {
+    await tabResMgr.releaseTab(tab.id!);
+  }
+}
+
 export async function tab_http_fetch(
   params: Parameters<ClientCmd["tab.http.fetch"]>[0],
 ): Promise<SerializableResponse> {
@@ -63,10 +79,6 @@ export async function tab_http_fetch(
 
   const userAgent = getHeaderValue(requestInit?.headers, "User-Agent");
   const viewportWidth = getHeaderValue(requestInit?.headers, "viewport-width");
-  const acceptLanguage = getHeaderValue(
-    requestInit?.headers,
-    "accept-language",
-  );
 
   const { tabUrl, forceNewTab } = options;
 
@@ -77,7 +89,6 @@ export async function tab_http_fetch(
     requestUrl: url,
     userAgent,
     viewportWidth,
-    acceptLanguage,
     // incase of `Referrer Policystrict-origin-when-cross-origin`
     // origin: new URL(tabUrl).origin,
   };
@@ -175,27 +186,6 @@ export async function tab_http_fetch(
   }
 }
 
-export async function tab_dom_querySelectorAll(
-  params: Parameters<ClientCmd["tab.dom.querySelectorAll"]>[0],
-): Promise<string[]> {
-  const { url, selector } = params;
-  const tab = await tabResMgr.findOrCreateTab(url);
-  try {
-    const results = await browserRemoteExecution({
-      target: { tabId: tab.id! },
-      func: (sel: string) => {
-        const elements = document.querySelectorAll(sel);
-        const texts: string[] = Array.from(elements).map((el) => el.outerHTML);
-        return texts;
-      },
-      args: [selector],
-    });
-    return results;
-  } finally {
-    await tabResMgr.releaseTab(tab.id!);
-  }
-}
-
 export async function cookies_get(
   domain: string,
 ): Promise<Browser.cookies.Cookie[]> {
@@ -229,7 +219,7 @@ export async function cookies_getStr(url: string): Promise<string> {
 export async function cookies_status(
   params: Parameters<ClientCmd["cookies.status"]>[0],
 ): Promise<Record<string, CookieStatus | null>> {
-  const { keys, url, domain, partitionKey } = params;
+  const { url, domain, partitionKey, keys } = params;
 
   const cookiesGetAllSafeParams = { url, domain };
   let cookies: Browser.cookies.Cookie[];

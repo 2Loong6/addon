@@ -172,7 +172,6 @@ export type BypassParams = {
   referer?: string;
   userAgent?: string;
   viewportWidth?: string;
-  acceptLanguage?: string;
 };
 
 export type TabFetchOptions = {
