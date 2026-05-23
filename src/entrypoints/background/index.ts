@@ -7,6 +7,7 @@ import {
 } from "@/rpc/types";
 import { dispatchCommand } from "@/rpc/web";
 import { IS_DEBUG } from "@/utils/consts";
+import { appendLogEntry, pruneLogs } from "@/utils/logger";
 import { debugLog } from "@/utils/tools";
 import { alarmListener } from "./alarm";
 import { redirectToAutoNovel } from "./redirect";
@@ -26,6 +27,15 @@ const messageFn = (
   }
 
   switch (message.type) {
+    case MessageType.DebugLog: {
+      void appendLogEntry(message.payload.entry).catch((error) => {
+        console.warn(
+          "[AutoNovel.addon] Failed to persist forwarded debug log",
+          error,
+        );
+      });
+      return false;
+    }
     case MessageType.Ping: {
       sendResponse("pong");
       return false;
@@ -96,6 +106,7 @@ export default defineBackground(() => {
   debugLog.info(`CSC debug mode: ${IS_DEBUG}`);
 
   rateLimiter.init();
+  void pruneLogs();
   initSessionState();
 
   // Firefox mobile does not support context menus

@@ -3,6 +3,7 @@ export enum MessageType {
   Ping = "AUTO_NOVEL_CRAWLER_PING",
   Request = "AUTO_NOVEL_CRAWLER_REQUEST",
   Response = "AUTO_NOVEL_CRAWLER_RESPONSE",
+  DebugLog = "AUTO_NOVEL_DEBUG_LOG",
 }
 
 export interface MessagePing {
@@ -27,13 +28,61 @@ export interface MessageResponse {
   payload: ResponsePayload;
 }
 
+export enum LogLevel {
+  Debug = "debug",
+  Info = "info",
+  Warn = "warn",
+  Error = "error",
+}
+
+export enum LogContext {
+  Background = "background",
+  Content = "content",
+  Inject = "inject",
+  Unknown = "unknown",
+}
+
+export type SerializableLogValue =
+  | null
+  | string
+  | number
+  | boolean
+  | SerializableLogValue[]
+  | { [key: string]: SerializableLogValue };
+
+export interface LogEntry {
+  id: string;
+  timestamp: number;
+  isoTime: string;
+  level: LogLevel;
+  context: LogContext;
+  functionName: string;
+  args: SerializableLogValue[];
+  text: string;
+  stack: string;
+  version: string;
+}
+
+export interface DebugLogPayload {
+  entry: LogEntry;
+}
+
+export interface MessageDebugLog {
+  type: typeof MessageType.DebugLog;
+  payload: DebugLogPayload;
+}
+
 export type ResponsePayload = {
   success: boolean;
   result?: any;
   error?: string;
 };
 
-export type Message = MessagePing | MessageRequest | MessageResponse;
+export type Message =
+  | MessagePing
+  | MessageRequest
+  | MessageResponse
+  | MessageDebugLog;
 
 // ======================== types =================================
 export type EnvType = {

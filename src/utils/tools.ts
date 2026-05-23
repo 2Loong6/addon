@@ -1,4 +1,5 @@
-import { type SerializableRequest } from "@/rpc/types";
+import { LogLevel, type SerializableRequest } from "@/rpc/types";
+import { buildLogEntry, persistLogEntry } from "@/utils/logger";
 
 export function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -66,13 +67,18 @@ export function getHeaderValue(
   return new Headers(headers).get(name) ?? undefined;
 }
 
-export function debugLog(...args: any[]) {
-  console.debug("[AutoNovel.addon]", ...args);
+function writeDebugLog(level: LogLevel, args: any[]) {
+  const stack = new Error().stack ?? "";
+  console[level]("[AutoNovel.addon]", ...args);
+  persistLogEntry(buildLogEntry(level, args, stack));
 }
-debugLog.info = (...args: any[]) => console.info("[AutoNovel.addon]", ...args);
-debugLog.error = (...args: any[]) =>
-  console.error("[AutoNovel.addon]", ...args);
-debugLog.warn = (...args: any[]) => console.warn("[AutoNovel.addon]", ...args);
+
+export function debugLog(...args: any[]) {
+  writeDebugLog(LogLevel.Debug, args);
+}
+debugLog.info = (...args: any[]) => writeDebugLog(LogLevel.Info, args);
+debugLog.error = (...args: any[]) => writeDebugLog(LogLevel.Error, args);
+debugLog.warn = (...args: any[]) => writeDebugLog(LogLevel.Warn, args);
 
 export function newError(msg: string) {
   return new Error(`[AutoNovel.addon] ${msg}`);
