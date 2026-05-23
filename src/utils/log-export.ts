@@ -20,6 +20,35 @@ function bytesToBase64(bytes: Uint8Array): string {
   return btoa(binary);
 }
 
+function canUseObjectUrl(): boolean {
+  return typeof URL.createObjectURL === "function";
+}
+
+function buildDataUrl(bytes: Uint8Array): string {
+  return `data:application/zip;base64,${bytesToBase64(bytes)}`;
+}
+
+async function downloadZip(zip: JSZip, filename: string): Promise<void> {
+  if (canUseObjectUrl()) {
+    const blob = await zip.generateAsync({ type: "blob" });
+    const url = URL.createObjectURL(blob);
+
+    try {
+      await browser.downloads.download({ url, filename, saveAs: true });
+    } finally {
+      setTimeout(() => URL.revokeObjectURL(url), 10_000);
+    }
+    return;
+  }
+
+  const zipBytes = await zip.generateAsync({ type: "uint8array" });
+  await browser.downloads.download({
+    url: buildDataUrl(zipBytes),
+    filename,
+    saveAs: true,
+  });
+}
+
 function formatTextLog(entry: LogEntry): string {
   return [
     `[${entry.isoTime}] [${entry.level.toUpperCase()}] [${entry.context}] ${entry.text}`,
@@ -76,11 +105,8 @@ export async function exportLogs(
     ),
   );
 
-  const zipBytes = await zip.generateAsync({ type: "uint8array" });
-  const url = `data:application/zip;base64,${bytesToBase64(zipBytes)}`;
   const filename = buildZipName(entries);
-
-  await browser.downloads.download({ url, filename, saveAs: true });
+  await downloadZip(zip, filename);
 
   return { count: entries.length, filename };
 }
