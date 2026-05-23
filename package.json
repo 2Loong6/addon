@@ -7,11 +7,15 @@
   "scripts": {
     "dev": "wxt",
     "dev:firefox": "wxt -b firefox",
-    "build": "wxt build",
+
+    "build:chrome": "wxt build",
     "build:firefox": "wxt build -b firefox",
-    "zip": "pnpm zip:firefox; pnpm zip:chrome",
+    "build": "run-p build:chrome build:firefox",
+
     "zip:firefox": "wxt zip -b firefox --mv3",
     "zip:chrome": "wxt zip -b chrome --mv3",
+    "zip": "run-p zip:firefox zip:chrome",
+
     "compile": "vue-tsc --noEmit",
     "postinstall": "wxt prepare",
     "prepare": "husky"
@@ -42,6 +46,7 @@
     "globals": "^16.4.0",
     "husky": "^9.1.7",
     "lint-staged": "^16.2.3",
+    "npm-run-all2": "^9.0.0",
     "prettier": "3.6.2",
     "typescript": "^5.9.2",
     "typescript-eslint": "^8.46.0",
