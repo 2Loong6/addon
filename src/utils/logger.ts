@@ -19,15 +19,23 @@ const MAX_OBJECT_KEYS = 100;
 let prunePromise: Promise<void> | null = null;
 
 function hasBrowserRuntime(): boolean {
-  return typeof browser !== "undefined" && !!browser.runtime?.id;
+  return typeof browser !== "undefined" && !!browser.runtime;
 }
 
 function hasExtensionStorage(): boolean {
   return typeof storage !== "undefined" && hasBrowserRuntime();
 }
 
-function isStorageKey(key: string): key is StorageItemKey {
-  return key.startsWith(`local:${LOG_STORAGE_PREFIX}`);
+function isLogSnapshotKey(key: string): boolean {
+  return (
+    key.startsWith(LOG_STORAGE_PREFIX) ||
+    key.startsWith(`local:${LOG_STORAGE_PREFIX}`)
+  );
+}
+
+function toLocalStorageKey(key: string): StorageItemKey {
+  if (key.startsWith("local:")) return key as StorageItemKey;
+  return `local:${key}` as StorageItemKey;
 }
 
 function formatUtc8Time(timestamp: number): string {
@@ -176,16 +184,26 @@ export async function pruneLogs(now = Date.now()): Promise<void> {
   const outdatedKeys = Object.entries(snapshot)
     .filter(([key, value]) => {
       return (
-        isStorageKey(key) &&
+        isLogSnapshotKey(key) &&
         typeof value === "object" &&
         value != null &&
         typeof (value as Partial<LogEntry>).timestamp === "number" &&
         (value as LogEntry).timestamp < cutoff
       );
     })
-    .map(([key]) => key as StorageItemKey);
+    .map(([key]) => toLocalStorageKey(key));
 
   await Promise.all(outdatedKeys.map((key) => storage.removeItem(key)));
+}
+
+export async function clearLogs(): Promise<number> {
+  if (!hasExtensionStorage()) return 0;
+  const snapshot = await storage.snapshot("local");
+  const keys = Object.keys(snapshot).filter(isLogSnapshotKey);
+  await Promise.all(
+    keys.map((key) => storage.removeItem(toLocalStorageKey(key))),
+  );
+  return keys.length;
 }
 
 export function schedulePruneLogs(): void {
@@ -204,12 +222,11 @@ export async function getLogEntries(
   return Object.entries(snapshot)
     .filter(([key, value]) => {
       return (
-        isStorageKey(key) &&
+        isLogSnapshotKey(key) &&
         typeof value === "object" &&
         value != null &&
         typeof (value as Partial<LogEntry>).timestamp === "number" &&
-        (options.since == null ||
-          (value as LogEntry).timestamp >= options.since)
+        (!options.since || (value as LogEntry).timestamp >= options.since)
       );
     })
     .map(([, value]) => value as LogEntry)

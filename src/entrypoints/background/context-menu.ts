@@ -1,3 +1,6 @@
+import { exportLogs, LogExportRange } from "@/utils/log-export";
+import { clearLogs } from "@/utils/logger";
+
 import { getRedirectionResult } from "./redirect";
 
 type OnClickData = Browser.contextMenus.OnClickData;
@@ -9,15 +12,86 @@ type ContextMenuDefItem = {
   handler: (info: OnClickData, tab?: Tab) => void;
 };
 
+async function notify(title: string, message: string) {
+  await browser.notifications.create({
+    type: "basic",
+    iconUrl: browser.runtime.getURL("/icons/48.png"),
+    title,
+    message,
+  });
+}
+
+async function handleExportLog(range: LogExportRange) {
+  try {
+    const { count, filename } = await exportLogs(range);
+    await notify("日志导出完成", `已导出 ${count} 条日志：${filename}`);
+  } catch (error) {
+    debugLog.error("Export logs failed", error);
+    await notify(
+      "日志导出失败",
+      error instanceof Error ? error.message : String(error),
+    );
+  }
+}
+
+async function handleClearLogs() {
+  try {
+    const count = await clearLogs();
+    await notify("日志已清除", `已清除 ${count} 条日志`);
+  } catch (error) {
+    debugLog.error("Clear logs failed", error);
+    await notify(
+      "日志清除失败",
+      error instanceof Error ? error.message : String(error),
+    );
+  }
+}
+
 const contextMenuDefs: Record<string, ContextMenuDefItem> = {
+  "export-log-1h": {
+    info: {
+      id: "export-log-1h",
+      title: "导出最近 1 小时日志",
+      type: "normal",
+      contexts: ["action"],
+    } satisfies CreateProperties,
+    handler(info: OnClickData) {
+      if (info.menuItemId != "export-log-1h") return;
+      void handleExportLog(LogExportRange.LastHour);
+    },
+  },
+  "export-log-all": {
+    info: {
+      id: "export-log-all",
+      title: "导出全部日志（最近 24 小时）",
+      type: "normal",
+      contexts: ["action"],
+    } satisfies CreateProperties,
+    handler(info: OnClickData) {
+      if (info.menuItemId != "export-log-all") return;
+      void handleExportLog(LogExportRange.All);
+    },
+  },
+  "clear-logs": {
+    info: {
+      id: "clear-logs",
+      title: "清除全部日志",
+      type: "normal",
+      contexts: ["action"],
+    } satisfies CreateProperties,
+    handler(info: OnClickData) {
+      if (info.menuItemId != "clear-logs") return;
+      void handleClearLogs();
+    },
+  },
   "copy-auth-info": {
-    info: <CreateProperties>{
+    info: {
       id: "copy-auth-info",
       title: "复制机翻站认证信息到当前域",
       type: "normal",
       contexts: ["page"],
       documentUrlPatterns: ["*://localhost/*"],
-    },
+    } satisfies CreateProperties,
     async handler(info: OnClickData, tab?: Tab) {
       if (info.menuItemId != "copy-auth-info") return;
       const targetUrl = tab?.url ?? null;
@@ -65,7 +139,7 @@ const contextMenuDefs: Record<string, ContextMenuDefItem> = {
     },
   },
   "open-in-auto-novel": {
-    info: <CreateProperties>{
+    info: {
       id: "open-in-auto-novel",
       title: "在机翻站中打开链接",
       type: "normal",
@@ -80,7 +154,7 @@ const contextMenuDefs: Record<string, ContextMenuDefItem> = {
         "*://*.alphapolis.co.jp/*",
         "*://novelism.jp/*",
       ],
-    },
+    } satisfies CreateProperties,
     handler(info: OnClickData, tab?: Tab) {
       if (info.menuItemId != "open-in-auto-novel") return;
       const targetUrl = info.linkUrl ?? info.pageUrl ?? tab?.url ?? null;

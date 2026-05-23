@@ -1,5 +1,4 @@
 import type {
-  Message,
   MessageRequest,
   MessageResponse,
   TabFetchOptions,
@@ -9,7 +8,7 @@ import type { ClientCmd, SerializableResponse } from "@/rpc/types";
 import { serializeRequest } from "@/rpc/types";
 import { IS_TIMING } from "@/utils/consts";
 
-function sendMessageChrome<T>(msg: Message): Promise<T> {
+function sendMessageChrome<T>(msg: MessageRequest): Promise<T> {
   const addonId = "kenigjdcpndlkomhegjcepokcgikpdki";
   return new Promise((resolve, reject) => {
     console.debug(msg);
@@ -27,7 +26,7 @@ function sendMessageChrome<T>(msg: Message): Promise<T> {
   });
 }
 
-function sendMessageFirefox<T>(msg: Message): Promise<T> {
+function sendMessageFirefox<T>(msg: MessageRequest): Promise<T> {
   // const addonId = 'addon@n.novelia.cc';
   console.debug(msg);
   return new Promise<T>((resolve, reject) => {
@@ -61,7 +60,7 @@ function createAddonApi() {
   } else if (import.meta.env.FIREFOX) {
     return { sendMessage: sendMessageFirefox };
   } else {
-    function sendMessageFallback<T>(msg: Message): Promise<T> {
+    function sendMessageFallback<T>(msg: MessageRequest): Promise<T> {
       throw new Error(`浏览器${browser}不支持插件通信`);
     }
     return { sendMessage: sendMessageFallback };

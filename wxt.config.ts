@@ -37,6 +37,7 @@ export default defineConfig({
         "declarativeNetRequestWithHostAccess",
         "contextMenus",
         "notifications",
+        "downloads",
       ],
       host_permissions: [
         "*://*.novelia.cc/*",

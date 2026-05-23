@@ -11,6 +11,15 @@ export enum LogExportRange {
 
 const ONE_HOUR_MS = 60 * 60 * 1000;
 
+function bytesToBase64(bytes: Uint8Array): string {
+  let binary = "";
+  const chunkSize = 0x8000;
+  for (let i = 0; i < bytes.length; i += chunkSize) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + chunkSize));
+  }
+  return btoa(binary);
+}
+
 function formatTextLog(entry: LogEntry): string {
   return [
     `[${entry.isoTime}] [${entry.level.toUpperCase()}] [${entry.context}] ${entry.text}`,
@@ -21,11 +30,18 @@ function formatTextLog(entry: LogEntry): string {
   ].join("\n");
 }
 
+function pad2(value: number): string {
+  return value.toString().padStart(2, "0");
+}
+
+function formatFilenameTime(timestamp: number): string {
+  const time = new Date(timestamp + 8 * 60 * 60 * 1000);
+  return `${pad2(time.getUTCMonth() + 1)}${pad2(time.getUTCDate())}${pad2(time.getUTCHours())}${pad2(time.getUTCMinutes())}`;
+}
+
 function buildZipName(entries: LogEntry[]): string {
-  const now = Date.now();
-  const startTimestamp = entries[0]?.timestamp ?? now;
-  const endTimestamp = entries.at(-1)?.timestamp ?? startTimestamp;
-  return `addon-${VERSION}-log-${startTimestamp}-${endTimestamp}.zip`;
+  const startTimestamp = entries[0]?.timestamp ?? Date.now();
+  return `addon-${VERSION}-log-${formatFilenameTime(startTimestamp)}.zip`;
 }
 
 export async function exportLogs(
@@ -60,15 +76,11 @@ export async function exportLogs(
     ),
   );
 
-  const blob = await zip.generateAsync({ type: "blob" });
-  const url = URL.createObjectURL(blob);
+  const zipBytes = await zip.generateAsync({ type: "uint8array" });
+  const url = `data:application/zip;base64,${bytesToBase64(zipBytes)}`;
   const filename = buildZipName(entries);
 
-  try {
-    await browser.downloads.download({ url, filename, saveAs: true });
-  } finally {
-    setTimeout(() => URL.revokeObjectURL(url), 10_000);
-  }
+  await browser.downloads.download({ url, filename, saveAs: true });
 
   return { count: entries.length, filename };
 }
