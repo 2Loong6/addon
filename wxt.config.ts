@@ -85,6 +85,9 @@ export default defineConfig({
             id: "addon2@n.novelia.cc",
             update_url:
               "https://github.com/auto-novel/addon/releases/latest/download/update.json",
+            data_collection_permissions: {
+              required: ["none"],
+            },
           },
         },
       };
