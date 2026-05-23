@@ -58,6 +58,8 @@ async function runAllTestCasesParallel() {
     <div class="flex items-center">
       <h1 class="text-3xl font-bold text-gray-900 my-4">测试用例</h1>
       <div class="flex-1" />
+      <p class="font-bold text-gray-900 my-4"> 并行测试下部分测试用例可能失败，请手动重试</p>
+      <div class="flex-1" />
       <button
         class="px-3 py-1 bg-blue-500 text-white text-xs rounded hover:bg-blue-600 transition-colors mr-4"
         @click="runAllTestCases"

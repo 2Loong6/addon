@@ -4,6 +4,20 @@ export function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+export async function waitForTabUrl(
+  tab: Browser.tabs.Tab,
+  timeout: number = MAX_PAGE_LOAD_WAIT_TIME,
+): Promise<string | null> {
+  let tabUrl = tab.url ?? tab.pendingUrl;
+  if (!tabUrl) {
+    // Wait a bit and try again,
+    // as the URL might not be immediately available for new tabs.
+    await sleep(timeout);
+  }
+  tabUrl = tab.url ?? tab.pendingUrl;
+  return tabUrl ?? null;
+}
+
 type BrowserRemoteExecutionOptions<T, A extends any[]> = {
   target: Browser.scripting.InjectionTarget;
   func: (...args: A) => T | Promise<T>;
@@ -42,6 +56,14 @@ export function extractUrl(
   if (typeof input == "string") return input;
   else if (input instanceof URL) return input.toString();
   else return input.url;
+}
+
+export function getHeaderValue(
+  headers: HeadersInit | undefined,
+  name: string,
+): string | undefined {
+  if (!headers) return undefined;
+  return new Headers(headers).get(name) ?? undefined;
 }
 
 export function debugLog(...args: any[]) {
