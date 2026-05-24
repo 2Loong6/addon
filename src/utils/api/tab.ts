@@ -4,6 +4,7 @@ import {
   SerializableRequest,
   SerializableResponse,
 } from "@/rpc/types";
+import { debugLog } from "@/utils/log/backend";
 import { tabResMgr } from "@/utils/resource";
 import { rateLimiter } from "@/utils/rate-limit";
 import {

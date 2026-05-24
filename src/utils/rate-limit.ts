@@ -1,5 +1,6 @@
 import { Persist } from "@/utils/persist";
-import { DEFAULT_RATE_LIMIT_CONFIG } from "@/utils/consts";
+import { DEFAULT_RATE_LIMIT_CONFIG, IS_DEBUG } from "@/shared/consts";
+import { debugLog } from "@/utils/log/backend";
 import { Mutex } from "async-mutex";
 
 export type RateLimitConfig = {

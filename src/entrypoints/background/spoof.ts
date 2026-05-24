@@ -5,7 +5,8 @@
 
 import { rulesMgr } from "@/utils/resource";
 import { spoofRulesBuilder } from "@/utils/dnr";
-import { AutoNovelDomains } from "@/utils/consts";
+import { AutoNovelDomains } from "@/shared/consts";
+import { debugLog } from "@/utils/log/backend";
 
 /*
   page:    https://n.novelia.cc/novel/pixiv/s26651790/26651790

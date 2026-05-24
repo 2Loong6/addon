@@ -6,7 +6,8 @@ import type {
 import { deserializeResponse, MessageType } from "@/rpc/types";
 import type { ClientCmd, SerializableResponse } from "@/rpc/types";
 import { serializeRequest } from "@/rpc/types";
-import { IS_TIMING } from "@/utils/consts";
+import { IS_TIMING } from "@/shared/consts";
+import { debugLog } from "@/utils/log/frontend";
 
 function sendMessageChrome<T>(msg: MessageRequest): Promise<T> {
   const addonId = "kenigjdcpndlkomhegjcepokcgikpdki";

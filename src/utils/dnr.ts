@@ -1,6 +1,7 @@
 import { hashStringToInt } from "@/utils/tools";
 import { rulesMgr } from "@/utils/resource";
 import { BypassParams } from "@/rpc/types";
+import { debugLog } from "@/utils/log/backend";
 
 function spoofRulesKey(
   tabId: number,

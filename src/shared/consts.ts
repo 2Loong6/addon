@@ -29,7 +29,7 @@ export const DEFAULT_RATE_LIMIT_CONFIG: Record<string, RateLimitConfig> = {
 export const IS_TIMING = false;
 (() => {
   if (IS_TIMING && IS_DEBUG) {
-    debugLog.warn("Timing mode enabled: all rate limits are disabled.");
+    console.warn("Timing mode enabled: all rate limits are disabled.");
     for (const [key] of Object.entries(DEFAULT_RATE_LIMIT_CONFIG)) {
       DEFAULT_RATE_LIMIT_CONFIG[key] = {
         maxRequestsPerMinute: -1,

@@ -1,8 +1,8 @@
 import JSZip from "jszip";
 
 import type { LogEntry } from "@/rpc/types";
-import { VERSION } from "@/utils/consts";
-import { getLogEntries } from "@/utils/logger";
+import { VERSION } from "@/shared/consts";
+import { getLogEntries } from "@/utils/log/backend";
 
 export enum LogExportRange {
   LastHour = "last-hour",

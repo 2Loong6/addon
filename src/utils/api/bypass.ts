@@ -5,6 +5,7 @@ import {
   uninstallCORSRules,
   uninstallSpoofRules,
 } from "@/utils/dnr";
+import { debugLog } from "@/utils/log/backend";
 import { newError, waitForTabUrl } from "@/utils/tools";
 
 export async function local_install_bypass(

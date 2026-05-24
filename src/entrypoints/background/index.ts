@@ -6,9 +6,8 @@ import {
   type Message,
 } from "@/rpc/types";
 import { dispatchCommand } from "@/rpc/web";
-import { IS_DEBUG } from "@/utils/consts";
-import { appendLogEntry, pruneLogs } from "@/utils/logger";
-import { debugLog } from "@/utils/tools";
+import { IS_DEBUG } from "@/shared/consts";
+import { appendLogEntry, debugLog, pruneLogs } from "@/utils/log/backend";
 import { alarmListener } from "./alarm";
 import { redirectToAutoNovel } from "./redirect";
 import { addContextMenu, handleContextMenu } from "./context-menu";

@@ -154,7 +154,6 @@ export function deserializeRequest(
     return req;
   }
 
-  console.debug("deserializeRequest: ", req);
   const init: RequestInit = {
     method: req.method,
     headers: new Headers(req.headers),
@@ -178,7 +177,6 @@ export async function serializeRequest(
   }
 
   const headers: [string, string][] = Array.from(request.headers.entries());
-  console.debug("serializeRequest: ", headers);
 
   // FIXME(kuriko):
   //   对于 Firefox，即使有 body，Request.body 也是 undefiend。
@@ -192,7 +190,7 @@ export async function serializeRequest(
       body = await request.clone().text();
     }
   } catch (e) {
-    console.debug("Failed to serialize request body: ", e);
+    console.error("Failed to serialize request body: ", e);
   }
   const req: SerializableRequest = {
     url: request.url,

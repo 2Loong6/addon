@@ -1,6 +1,11 @@
 import { Persist, RefCount } from "@/utils/persist";
 import { newError } from "@/utils/tools";
-import { DELAYED_TAB_CLOSE_TIME } from "@/utils/consts";
+import {
+  DELAYED_TAB_CLOSE_TIME,
+  MAX_PAGE_LOAD_WAIT_TIME,
+} from "@/shared/consts";
+import { debugLog } from "@/utils/log/backend";
+// import { alarmListener } from "@/entrypoints/background/alarm";
 
 type Tab = Browser.tabs.Tab;
 type TabId = number;
@@ -93,9 +98,16 @@ export class TabResMgr {
       if (tabState.refCount > 0) return;
 
       // 开始延时关闭
-      await browser.alarms.create(TabResMgr.genAlarmName(tabId), {
+      const taskId = TabResMgr.genAlarmName(tabId);
+      // if (DELAYED_TAB_CLOSE_TIME <= 30_000) {
+      //   setTimeout(async () => {
+      //     await alarmListener({ name: taskId } as Browser.alarms.Alarm);
+      //   }, DELAYED_TAB_CLOSE_TIME);
+      // } else {
+      await browser.alarms.create(taskId, {
         delayInMinutes: DELAYED_TAB_CLOSE_TIME / 60000,
       });
+      // }
     });
   }
 

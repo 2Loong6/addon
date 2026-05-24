@@ -48,13 +48,13 @@ export default defineContentScript({
     "https://*.fishhawk.top/*",
   ],
   async main() {
-    debugLog("Content script for auto-novel loaded.");
+    console.info("Content script for auto-novel loaded.");
     forwardDebugLogToAddon();
     if (import.meta.env.FIREFOX) {
       forwardMessageToAddon();
     }
 
-    debugLog("Injecting Addon into web page.");
+    console.info("Injecting Addon into web page.");
     await injectScript("/inject.js", {
       keepInDom: true,
     });

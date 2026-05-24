@@ -1,5 +1,5 @@
-import { exportLogs, LogExportRange } from "@/utils/log-export";
-import { clearLogs } from "@/utils/logger";
+import { clearLogs, debugLog } from "@/utils/log/backend";
+import { exportLogs, LogExportRange } from "@/utils/log/export";
 
 import { getRedirectionResult } from "./redirect";
 

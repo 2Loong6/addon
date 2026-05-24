@@ -10,7 +10,7 @@ export default defineConfig({
   },
   manifestVersion: 3,
   manifest: ({ browser }) => {
-    let userManifest: UserManifest = {
+    let userManifest: UserManifest | any = {
       name: "轻小说机翻机器人",
       homepage_url: "https://n.novelia.cc/",
       action: {

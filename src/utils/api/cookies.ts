@@ -1,5 +1,6 @@
 import { ClientCmd, CookieStatus, SerializableResponse } from "@/rpc/types";
-import { cookie2SetDetail, debugLog, newError } from "@/utils/tools";
+import { debugLog } from "@/utils/log/backend";
+import { cookie2SetDetail, newError } from "@/utils/tools";
 import setCookie from "set-cookie-parser";
 
 export async function cookies_get(

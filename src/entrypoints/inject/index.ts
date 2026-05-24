@@ -1,5 +1,5 @@
 import { TabFetchOptions } from "@/rpc/types";
-import { VERSION } from "@/utils/consts";
+import { VERSION } from "@/shared/consts";
 
 import { AddonCapabilities } from "./capabilities";
 import { AddonClient } from "./client";
@@ -86,7 +86,10 @@ declare global {
 }
 
 export default defineUnlistedScript(() => {
-  debugLog("Addon script loaded");
+  console.info("Addon script loaded");
   window.Addon = Addon;
-  debugLog("Addon injected to window.Addon, extension version:", Addon.version);
+  console.info(
+    "Addon injected to window.Addon, extension version:",
+    Addon.version,
+  );
 });

@@ -1,4 +1,5 @@
 import { SerializableResponse, serializeResponse } from "@/rpc/types";
+import { debugLog } from "@/utils/log/backend";
 import { rateLimiter } from "@/utils/rate-limit";
 import { extractUrl, getHeaderValue } from "@/utils/tools";
 import { local_install_bypass, local_uninstall_bypass } from "./bypass";

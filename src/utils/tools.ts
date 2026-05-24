@@ -1,5 +1,5 @@
-import { LogLevel, type SerializableRequest } from "@/rpc/types";
-import { buildLogEntry, persistLogEntry } from "@/utils/logger";
+import type { SerializableRequest } from "@/rpc/types";
+import { MAX_PAGE_LOAD_WAIT_TIME } from "@/shared/consts";
 
 export function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -35,8 +35,7 @@ export async function browserRemoteExecution<T, A extends any[]>({
     return results[0].result as T;
   } else {
     const msg = `Failed to execute script in tab: ${results}`;
-    console.error(results);
-    debugLog(msg);
+    console.error(msg, results);
     throw new Error(msg);
   }
 }
@@ -66,19 +65,6 @@ export function getHeaderValue(
   if (!headers) return undefined;
   return new Headers(headers).get(name) ?? undefined;
 }
-
-function writeDebugLog(level: LogLevel, args: any[]) {
-  const stack = new Error().stack ?? "";
-  console[level]("[AutoNovel.addon]", ...args);
-  persistLogEntry(buildLogEntry(level, args, stack));
-}
-
-export function debugLog(...args: any[]) {
-  writeDebugLog(LogLevel.Debug, args);
-}
-debugLog.info = (...args: any[]) => writeDebugLog(LogLevel.Info, args);
-debugLog.error = (...args: any[]) => writeDebugLog(LogLevel.Error, args);
-debugLog.warn = (...args: any[]) => writeDebugLog(LogLevel.Warn, args);
 
 export function newError(msg: string) {
   return new Error(`[AutoNovel.addon] ${msg}`);
