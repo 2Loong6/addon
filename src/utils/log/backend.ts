@@ -37,14 +37,14 @@ export async function pruneOldestHalfLogs(): Promise<number> {
   if (!hasExtensionStorage()) return 0;
   const snapshot = await storage.snapshot("local");
   const logItems = Object.entries(snapshot)
-    .filter(([, value]) => {
+    .filter(([key, value]) => {
       return (
+        isLogSnapshotKey(key) &&
         typeof value === "object" &&
         value != null &&
         typeof (value as Partial<LogEntry>).timestamp === "number"
       );
     })
-    .filter(([key]) => isLogSnapshotKey(key))
     .sort(([, a], [, b]) => {
       return (a as LogEntry).timestamp - (b as LogEntry).timestamp;
     });
