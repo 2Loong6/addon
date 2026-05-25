@@ -87,7 +87,7 @@ export class TabResMgr {
     });
   }
 
-  async releaseTab(tabId: number) {
+  async releaseTab(tabId: number, closeDelay: number) {
     await this.withTabStateAtomic(tabId, async () => {
       const tabState = await this.tabState.get(tabId);
       if (tabState == null) return;
@@ -105,7 +105,7 @@ export class TabResMgr {
       //   }, DELAYED_TAB_CLOSE_TIME);
       // } else {
       await browser.alarms.create(taskId, {
-        delayInMinutes: DELAYED_TAB_CLOSE_TIME / 60000,
+        delayInMinutes: closeDelay / 60000,
       });
       // }
     });
@@ -161,6 +161,7 @@ export class TabResMgr {
     options?: {
       forceNewTab?: boolean;
       maxWait?: number;
+      closeTimeout?: number;
     },
   ): Promise<Tab> {
     debugLog(`[TabResMgr] findOrCreateTab: ${url}`);
@@ -223,7 +224,10 @@ export class TabResMgr {
           if (aliveTab && this.isTabMatchingUrl(aliveTab, url)) {
             tab = aliveTab;
           } else {
-            await this.releaseTab(reusableTab.id);
+            await this.releaseTab(
+              reusableTab.id,
+              options?.closeTimeout ?? DELAYED_TAB_CLOSE_TIME,
+            );
             tabAcquired = false;
             tab = await createNewTabFn();
           }

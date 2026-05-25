@@ -223,11 +223,27 @@ export type BypassParams = {
 
 export type TabFetchOptions = {
   tabUrl: string;
+  tabId?: number;
   forceNewTab?: boolean;
+  forceWaitForLoad?: boolean;
+  closeTimeout?: number;
+};
+
+export type TabDomQueryOptions = {
+  tabId?: number;
+  forceNewTab?: boolean;
+  forceWaitForLoad?: boolean;
+  closeTimeout?: number;
 };
 
 export type CookieStatus = Partial<Browser.cookies.Cookie> & {
   name: string;
+};
+
+export type DomQueryResults = {
+  tabId: number;
+  results: string[];
+  readyState: DocumentReadyState;
 };
 
 export type ClientCmd = {
@@ -256,11 +272,12 @@ export type ClientCmd = {
 
   "tab.dom.querySelectorAll"(
     params: {
-      url: string;
+      tabUrl: string;
       selector: string;
+      options?: TabDomQueryOptions;
     },
     env: EnvType,
-  ): Promise<string[]>;
+  ): Promise<DomQueryResults>;
 
   "cookies.status"(
     params: {

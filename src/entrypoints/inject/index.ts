@@ -42,6 +42,8 @@ export const Addon = {
     return addon.tab_http_fetch(options, input, init);
   },
 
+  tabDomQuery: buildAddonEndpoint("tab_dom_querySelectorAll"),
+
   async spoofFetch(
     baseUrl: string,
     input: string | URL | Request,

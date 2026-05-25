@@ -1,6 +1,7 @@
 import {
   BypassParams,
   ClientCmd,
+  DomQueryResults,
   SerializableRequest,
   SerializableResponse,
 } from "@/rpc/types";
@@ -12,35 +13,105 @@ import {
   extractUrl,
   getHeaderValue,
   newError,
+  sleep,
 } from "@/utils/tools";
 import { local_install_bypass, local_uninstall_bypass } from "./bypass";
+import { DELAYED_TAB_CLOSE_TIME } from "@/shared/consts";
 
+type TabDocumentState = {
+  body: string;
+  readyState: DocumentReadyState;
+};
+
+type TabAccessOptions = {
+  tabUrl: string;
+  tabId?: number;
+  forceNewTab?: boolean;
+  forceWaitForLoad?: boolean;
+  closeTimeout?: number;
+};
+
+type TabWithId = Browser.tabs.Tab & {
+  id: number;
+};
+
+type RemoteDomQueryResult = {
+  results: string[];
+  readyState: DocumentReadyState;
+};
+
+function hasTabId(tab: Browser.tabs.Tab): tab is TabWithId {
+  return tab.id != null;
+}
+
+async function getOrCreateTab({
+  tabUrl,
+  tabId,
+  forceNewTab,
+  closeTimeout,
+}: TabAccessOptions): Promise<TabWithId> {
+  let tab: Browser.tabs.Tab | null = null;
+
+  if (tabId) {
+    tab = await browser.tabs.get(tabId);
+  }
+  if (!tab) {
+    tab = await tabResMgr.findOrCreateTab(tabUrl, {
+      forceNewTab,
+      closeTimeout,
+    });
+  }
+  if (!hasTabId(tab)) throw newError(`Tab has no id: ${tab}`);
+
+  return tab;
+}
+
+async function waitForTabLoaded(
+  tabId: number,
+  tabUrl: string,
+): Promise<TabDocumentState> {
+  let finalTabDocumentState: TabDocumentState | null = null;
+
+  for (let attempt = 0; attempt < 5; attempt++) {
+    const tabDocumentState = await browserRemoteExecution({
+      target: { tabId },
+      func: (): TabDocumentState => {
+        const body = document.querySelector("body")?.getHTML() ?? "";
+        const readyState = document.readyState;
+        return {
+          body,
+          readyState,
+        };
+      },
+      args: [],
+    });
+
+    if (tabDocumentState.body) {
+      finalTabDocumentState = tabDocumentState;
+      break;
+    }
+    await sleep(1000);
+  }
+
+  if (finalTabDocumentState == null) {
+    debugLog.warn(`Tab ${tabId} did not load within expected time.`);
+    throw newError(`Tab did not load within expected time: ${tabUrl}`);
+  }
+
+  return finalTabDocumentState;
+}
 /**
  * Injected script for tab DOM querySelectorAll.
  * No external variable references - only uses parameters and Web APIs.
  * Serializable for browser.scripting.executeScript.
  */
-function injectedDomQuerySelectorAll(sel: string): string[] {
+function injectedDomQuerySelectorAll(sel: string): RemoteDomQueryResult {
   const elements = document.querySelectorAll(sel);
   const texts: string[] = Array.from(elements).map((el) => el.outerHTML);
-  return texts;
-}
-
-export async function tab_dom_querySelectorAll(
-  params: Parameters<ClientCmd["tab.dom.querySelectorAll"]>[0],
-): Promise<string[]> {
-  const { url, selector } = params;
-  const tab = await tabResMgr.findOrCreateTab(url);
-  try {
-    const results = await browserRemoteExecution({
-      target: { tabId: tab.id! },
-      func: injectedDomQuerySelectorAll,
-      args: [selector],
-    });
-    return results;
-  } finally {
-    await tabResMgr.releaseTab(tab.id!);
-  }
+  return {
+    results: texts,
+    readyState: document.readyState,
+  };
 }
 
 /**
@@ -123,7 +194,8 @@ export async function tab_http_fetch(
   const userAgent = getHeaderValue(requestInit?.headers, "User-Agent");
   const viewportWidth = getHeaderValue(requestInit?.headers, "viewport-width");
 
-  const { tabUrl, forceNewTab } = options;
+  const { tabUrl, tabId, forceNewTab, forceWaitForLoad, closeTimeout } =
+    options;
 
   const url = extractUrl(input);
   const release = await rateLimiter.acquire(rateLimiter.urlToKey(url));
@@ -137,8 +209,16 @@ export async function tab_http_fetch(
   };
 
   try {
-    const tab = await tabResMgr.findOrCreateTab(tabUrl, { forceNewTab });
-    if (tab.id == null) throw newError(`Tab has no id: ${tab}`);
+    const tab = await getOrCreateTab({
+      tabUrl,
+      tabId,
+      forceNewTab,
+      closeTimeout,
+    });
+
+    if (forceWaitForLoad) {
+      await waitForTabLoaded(tab.id, tabUrl);
+    }
 
     try {
       await local_install_bypass(tab.id, bypassParams);
@@ -147,6 +227,7 @@ export async function tab_http_fetch(
         func: injectedTabHttpFetch,
         args: [input, requestInit ?? null],
       });
+      respSer.headers.push(["X-AutoNovelAddon-TabId", String(tab.id)]);
       return respSer;
     } catch (e) {
       debugLog.error(
@@ -156,9 +237,45 @@ export async function tab_http_fetch(
       throw e;
     } finally {
       await local_uninstall_bypass(tab.id, bypassParams);
-      await tabResMgr.releaseTab(tab.id);
+      await tabResMgr.releaseTab(
+        tab.id,
+        closeTimeout ?? DELAYED_TAB_CLOSE_TIME,
+      );
     }
   } finally {
     await release();
+  }
+}
+
+export async function tab_dom_querySelectorAll(
+  params: Parameters<ClientCmd["tab.dom.querySelectorAll"]>[0],
+): Promise<DomQueryResults> {
+  const { tabUrl, selector, options } = params;
+  const { tabId, forceNewTab, forceWaitForLoad, closeTimeout } = options ?? {};
+
+  const tab = await getOrCreateTab({
+    tabUrl,
+    tabId,
+    forceNewTab,
+    closeTimeout,
+  });
+
+  if (forceWaitForLoad) {
+    await waitForTabLoaded(tab.id, tabUrl);
+  }
+
+  try {
+    const results: RemoteDomQueryResult = await browserRemoteExecution({
+      target: { tabId: tab.id! },
+      func: injectedDomQuerySelectorAll,
+      args: [selector],
+    });
+    return {
+      tabId: tab.id!,
+      results: results.results,
+      readyState: results.readyState,
+    };
+  } finally {
+    await tabResMgr.releaseTab(tab.id, closeTimeout ?? DELAYED_TAB_CLOSE_TIME);
   }
 }
