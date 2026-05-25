@@ -7,7 +7,7 @@ import {
 } from "@/rpc/types";
 import { dispatchCommand } from "@/rpc/web";
 import { IS_DEBUG } from "@/shared/consts";
-import { appendLogEntry, debugLog, pruneLogs } from "@/utils/log/backend";
+import { appendLogEntry, debugLog } from "@/utils/log/backend";
 import { alarmListener } from "./alarm";
 import { redirectToAutoNovel } from "./redirect";
 import { addContextMenu, handleContextMenu } from "./context-menu";
@@ -105,7 +105,6 @@ export default defineBackground(() => {
   debugLog.info(`CSC debug mode: ${IS_DEBUG}`);
 
   rateLimiter.init();
-  void pruneLogs();
   initSessionState();
 
   // Firefox mobile does not support context menus

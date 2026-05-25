@@ -4,13 +4,6 @@ import type { LogEntry } from "@/rpc/types";
 import { VERSION } from "@/shared/consts";
 import { getLogEntries } from "@/utils/log/backend";
 
-export enum LogExportRange {
-  Last10Minutes = "last-10-minutes",
-  All = "all",
-}
-
-const TEN_MINUTES_MS = 10 * 60 * 1000;
-
 function bytesToBase64(bytes: Uint8Array): string {
   let binary = "";
   const chunkSize = 0x8000;
@@ -73,14 +66,11 @@ function buildZipName(entries: LogEntry[]): string {
   return `addon-${VERSION}-log-${formatFilenameTime(startTimestamp)}.zip`;
 }
 
-export async function exportLogs(
-  range: LogExportRange,
-): Promise<{ count: number; filename: string }> {
-  const since =
-    range === LogExportRange.Last10Minutes
-      ? Date.now() - TEN_MINUTES_MS
-      : undefined;
-  const entries = await getLogEntries({ since });
+export async function exportLogs(): Promise<{
+  count: number;
+  filename: string;
+}> {
+  const entries = await getLogEntries();
   const zip = new JSZip();
 
   const jsonl = entries.map((entry) => JSON.stringify(entry)).join("\n");
@@ -96,7 +86,7 @@ export async function exportLogs(
     JSON.stringify(
       {
         version: VERSION,
-        range,
+        range: "all",
         exportedAt: new Date().toISOString(),
         count: entries.length,
         startTimestamp: entries[0]?.timestamp ?? null,

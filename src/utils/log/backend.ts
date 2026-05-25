@@ -1,12 +1,12 @@
 import { LogContext, LogLevel, type LogEntry } from "@/rpc/types";
 import {
   buildLogEntry,
+  LOG_MAX_ENTRIES,
   LOG_PREFIX,
-  LOG_RETENTION_MS,
   LOG_STORAGE_PREFIX,
 } from "@/utils/log/shared";
 
-let prunePromise: Promise<void> | null = null;
+let pendingLogEntryCount = 0;
 
 function hasBrowserRuntime(): boolean {
   return typeof browser !== "undefined" && !!browser.runtime;
@@ -28,12 +28,7 @@ function toLocalStorageKey(key: string): StorageItemKey {
   return `local:${key}` as StorageItemKey;
 }
 
-function isQuotaExceededError(error: unknown): boolean {
-  if (!(error instanceof Error)) return false;
-  return /quota|kQuotaBytes/i.test(error.message);
-}
-
-export async function pruneOldestHalfLogs(): Promise<number> {
+async function trimLogEntries(maxEntries = LOG_MAX_ENTRIES): Promise<number> {
   if (!hasExtensionStorage()) return 0;
   const snapshot = await storage.snapshot("local");
   const logItems = Object.entries(snapshot)
@@ -49,25 +44,37 @@ export async function pruneOldestHalfLogs(): Promise<number> {
       return (a as LogEntry).timestamp - (b as LogEntry).timestamp;
     });
 
+  const removeCount = Math.max(0, logItems.length - maxEntries);
+  if (removeCount === 0) return 0;
+
+  console.log(
+    `[AutoNovel.addon] Trimming ${removeCount} log entries to maintain storage limits`,
+  );
+
   const keysToRemove = logItems
-    .slice(0, Math.ceil(logItems.length / 2))
+    .slice(0, removeCount)
     .map(([key]) => toLocalStorageKey(key));
 
   await Promise.all(keysToRemove.map((key) => storage.removeItem(key)));
   return keysToRemove.length;
 }
 
+async function scheduleTrimLogEntries(): Promise<void> {
+  pendingLogEntryCount++;
+  if (pendingLogEntryCount <= LOG_MAX_ENTRIES) return;
+
+  pendingLogEntryCount = 0;
+  await trimLogEntries();
+  console.log(
+    "[AutoNovel.addon] Trimmed log entries to maintain storage limits",
+  );
+}
+
 export async function appendLogEntry(entry: LogEntry): Promise<void> {
   if (!hasExtensionStorage()) return;
   const key = `local:${LOG_STORAGE_PREFIX}${entry.id}` as StorageItemKey;
-  try {
-    await storage.setItem(key, entry);
-  } catch (error) {
-    if (!isQuotaExceededError(error)) throw error;
-    await pruneOldestHalfLogs();
-    await storage.setItem(key, entry);
-  }
-  schedulePruneLogs();
+  await storage.setItem(key, entry);
+  await scheduleTrimLogEntries();
 }
 
 export function persistLogEntry(entry: LogEntry): void {
@@ -83,25 +90,6 @@ function writeDebugLog(level: LogLevel, args: unknown[]) {
   persistLogEntry(buildLogEntry(level, args, stack, LogContext.Background));
 }
 
-export async function pruneLogs(now = Date.now()): Promise<void> {
-  if (!hasExtensionStorage()) return;
-  const cutoff = now - LOG_RETENTION_MS;
-  const snapshot = await storage.snapshot("local");
-  const outdatedKeys = Object.entries(snapshot)
-    .filter(([key, value]) => {
-      return (
-        isLogSnapshotKey(key) &&
-        typeof value === "object" &&
-        value != null &&
-        typeof (value as Partial<LogEntry>).timestamp === "number" &&
-        (value as LogEntry).timestamp < cutoff
-      );
-    })
-    .map(([key]) => toLocalStorageKey(key));
-
-  await Promise.all(outdatedKeys.map((key) => storage.removeItem(key)));
-}
-
 export async function clearLogs(): Promise<number> {
   if (!hasExtensionStorage()) return 0;
   const snapshot = await storage.snapshot("local");
@@ -109,21 +97,12 @@ export async function clearLogs(): Promise<number> {
   await Promise.all(
     keys.map((key) => storage.removeItem(toLocalStorageKey(key))),
   );
+  pendingLogEntryCount = 0;
   return keys.length;
 }
 
-export function schedulePruneLogs(): void {
-  if (prunePromise) return;
-  prunePromise = pruneLogs().finally(() => {
-    prunePromise = null;
-  });
-}
-
-export async function getLogEntries(
-  options: { since?: number } = {},
-): Promise<LogEntry[]> {
+export async function getLogEntries(): Promise<LogEntry[]> {
   if (!hasExtensionStorage()) return [];
-  await pruneLogs();
   const snapshot = await storage.snapshot("local");
   return Object.entries(snapshot)
     .filter(([key, value]) => {
@@ -131,8 +110,7 @@ export async function getLogEntries(
         isLogSnapshotKey(key) &&
         typeof value === "object" &&
         value != null &&
-        typeof (value as Partial<LogEntry>).timestamp === "number" &&
-        (!options.since || (value as LogEntry).timestamp >= options.since)
+        typeof (value as Partial<LogEntry>).timestamp === "number"
       );
     })
     .map(([, value]) => value as LogEntry)

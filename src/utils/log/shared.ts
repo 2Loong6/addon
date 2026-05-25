@@ -7,7 +7,7 @@ import {
 import { VERSION } from "@/shared/consts";
 
 export const LOG_PREFIX = "[AutoNovel.addon]";
-export const LOG_RETENTION_MS = 60 * 60 * 1000;
+export const LOG_MAX_ENTRIES = 200;
 export const LOG_STORAGE_PREFIX = "debug-log:";
 
 const MAX_DEPTH = 6;

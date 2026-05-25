@@ -77,7 +77,7 @@ export class TabResMgr {
     await this.withTabStateAtomic(tabId, async () => {
       const tabState = await this.tabState.get(tabId);
       if (tabState == null) {
-        debugLog.warn("[TabResMgr] acquireTab on missing tab state", { tabId });
+        debugLog("[TabResMgr] acquireTab on missing tab state", { tabId });
         return;
       }
 

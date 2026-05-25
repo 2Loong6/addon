@@ -1,8 +1,8 @@
-import { DELAYED_TAB_CLOSE_TIME } from "@/shared/consts";
 import { clearLogs, debugLog } from "@/utils/log/backend";
-import { exportLogs, LogExportRange } from "@/utils/log/export";
+import { exportLogs } from "@/utils/log/export";
 
 import { getRedirectionResult } from "./redirect";
+import { LOG_MAX_ENTRIES } from "@/utils/log/shared";
 
 type OnClickData = Browser.contextMenus.OnClickData;
 type CreateProperties = Browser.contextMenus.CreateProperties;
@@ -22,9 +22,9 @@ async function notify(title: string, message: string) {
   });
 }
 
-async function handleExportLog(range: LogExportRange) {
+async function handleExportLog() {
   try {
-    const { count, filename } = await exportLogs(range);
+    const { count, filename } = await exportLogs();
     await notify("日志导出完成", `已导出 ${count} 条日志：${filename}`);
   } catch (error) {
     debugLog.error("Export logs failed", error);
@@ -52,25 +52,13 @@ const contextMenuDefs: Record<string, ContextMenuDefItem> = {
   "export-log-all": {
     info: {
       id: "export-log-all",
-      title: "导出全部日志（最近 1 小时）",
+      title: `导出全部日志（最近 ${LOG_MAX_ENTRIES} 条）`,
       type: "normal",
       contexts: ["action"],
     } satisfies CreateProperties,
     handler(info: OnClickData) {
       if (info.menuItemId != "export-log-all") return;
-      void handleExportLog(LogExportRange.All);
-    },
-  },
-  "export-log-10min": {
-    info: {
-      id: "export-log-10min",
-      title: "导出最近 10 分钟日志",
-      type: "normal",
-      contexts: ["action"],
-    } satisfies CreateProperties,
-    handler(info: OnClickData) {
-      if (info.menuItemId != "export-log-10min") return;
-      void handleExportLog(LogExportRange.Last10Minutes);
+      void handleExportLog();
     },
   },
   "clear-logs": {
