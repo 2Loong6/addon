@@ -32,7 +32,7 @@ AutoNovel 开发阶段本地启动的 `pnpm dev` 站点，右键可以将主站�
 > [!CAUTION]
 >
 > **注意**，如果在机翻站使用【**需要将机翻站网址加入浏览器广告拦截扩展的白名单**】
-> 
+>
 > **解释**：这是因为有道的 rlog api 被 adblock 拦截。机翻站调用 rlog 时也会被拦截，导致后续请求失败。
 >
 > 机翻站本身无任何广告。
@@ -79,7 +79,7 @@ AutoNovel 开发阶段本地启动的 `pnpm dev` 站点，右键可以将主站�
 - 检查是否导入成功：中文标题非空，简介是中文而非日文。
 
 > 如果存在问题，请手动打开一次对应的 Amazon 页面和 `dict.youdao.com` 页面获取用户凭证或者过人机验证。
-> 
+>
 > 之后刷新 wenku-edit 页面，重试导入流程。
 
 ## API
@@ -87,29 +87,80 @@ AutoNovel 开发阶段本地启动的 `pnpm dev` 站点，右键可以将主站�
 插件会将扩展函数挂载到 `window.Addon` 上，类型如下：
 
 ```typescript
-type Cookie = browser.cookies.Cookie[];
+type AddonCapabilityVersion = `${number}.${number}.${number}`;
+
+type AddonCapabilityManifest = {
+  [capability: string]: AddonCapabilityVersion | AddonCapabilityManifest;
+};
+
+type InfoResult = {
+  version: string;
+  homepage_url: string;
+};
+
+type CookieStatus = Partial<browser.cookies.Cookie> & {
+  name: string;
+};
+
+type TabFetchOptions = {
+  tabUrl: string;
+  tabId?: number;
+  forceNewTab?: boolean;
+  forceWaitForLoad?: boolean;
+  closeTimeout?: number;
+};
+
+type TabDomQueryOptions = {
+  tabId?: number;
+  forceNewTab?: boolean;
+  forceWaitForLoad?: boolean;
+  closeTimeout?: number;
+};
+
+type DomQueryResults = {
+  tabId: number;
+  results: string[];
+  readyState: DocumentReadyState;
+};
 
 interface AddonApi {
   version: string;
+
+  /** 兼容旧名称，等同于 capabilities。 */
+  compat: AddonCapabilityManifest;
+
+  /** 插件能力清单，可用于按版本判断功能是否可用。 */
+  capabilities: AddonCapabilityManifest;
+
+  info(): Promise<InfoResult>;
 
   cookiesStatus(params: {
     url?: string;
     domain?: string;
     partitionKey?: browser.cookies.CookiePartitionKey;
     keys: string[] | '*';
-  }): Promise<Record<string, CookieStatus>>;
+  }): Promise<Record<string, CookieStatus | null>>;
 
   cookiesPatch(params: {
     url: string;
-    patches: Record<string, CookieStatus>;
+    /** value 为 null 时删除对应 cookie。 */
+    patches: Record<string, CookieStatus | null>;
   }): Promise<void>;
 
   fetch(input: string | URL | Request, init?: RequestInit): Promise<Response>;
+
   tabFetch(
-    options: { tabUrl: string; forceNewTab?: boolean },
+    options: TabFetchOptions,
     input: string | URL | Request,
     init?: RequestInit,
   ): Promise<Response>;
+
+  tabDomQuery(params: {
+    tabUrl: string;
+    selector: string;
+    options?: TabDomQueryOptions;
+  }): Promise<DomQueryResults>;
+
   spoofFetch(
     baseUrl: string,
     input: string | URL | Request,
