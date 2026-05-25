@@ -5,11 +5,11 @@ import { VERSION } from "@/shared/consts";
 import { getLogEntries } from "@/utils/log/backend";
 
 export enum LogExportRange {
-  LastHour = "last-hour",
+  Last10Minutes = "last-10-minutes",
   All = "all",
 }
 
-const ONE_HOUR_MS = 60 * 60 * 1000;
+const TEN_MINUTES_MS = 10 * 60 * 1000;
 
 function bytesToBase64(bytes: Uint8Array): string {
   let binary = "";
@@ -77,7 +77,9 @@ export async function exportLogs(
   range: LogExportRange,
 ): Promise<{ count: number; filename: string }> {
   const since =
-    range === LogExportRange.LastHour ? Date.now() - ONE_HOUR_MS : undefined;
+    range === LogExportRange.Last10Minutes
+      ? Date.now() - TEN_MINUTES_MS
+      : undefined;
   const entries = await getLogEntries({ since });
   const zip = new JSZip();
 

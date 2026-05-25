@@ -28,9 +28,45 @@ function toLocalStorageKey(key: string): StorageItemKey {
   return `local:${key}` as StorageItemKey;
 }
 
+function isQuotaExceededError(error: unknown): boolean {
+  if (!(error instanceof Error)) return false;
+  return /quota|kQuotaBytes/i.test(error.message);
+}
+
+export async function pruneOldestHalfLogs(): Promise<number> {
+  if (!hasExtensionStorage()) return 0;
+  const snapshot = await storage.snapshot("local");
+  const logItems = Object.entries(snapshot)
+    .filter(([, value]) => {
+      return (
+        typeof value === "object" &&
+        value != null &&
+        typeof (value as Partial<LogEntry>).timestamp === "number"
+      );
+    })
+    .filter(([key]) => isLogSnapshotKey(key))
+    .sort(([, a], [, b]) => {
+      return (a as LogEntry).timestamp - (b as LogEntry).timestamp;
+    });
+
+  const keysToRemove = logItems
+    .slice(0, Math.ceil(logItems.length / 2))
+    .map(([key]) => toLocalStorageKey(key));
+
+  await Promise.all(keysToRemove.map((key) => storage.removeItem(key)));
+  return keysToRemove.length;
+}
+
 export async function appendLogEntry(entry: LogEntry): Promise<void> {
   if (!hasExtensionStorage()) return;
-  await storage.setItem(`local:${LOG_STORAGE_PREFIX}${entry.id}`, entry);
+  const key = `local:${LOG_STORAGE_PREFIX}${entry.id}` as StorageItemKey;
+  try {
+    await storage.setItem(key, entry);
+  } catch (error) {
+    if (!isQuotaExceededError(error)) throw error;
+    await pruneOldestHalfLogs();
+    await storage.setItem(key, entry);
+  }
   schedulePruneLogs();
 }
 

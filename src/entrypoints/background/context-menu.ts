@@ -1,3 +1,4 @@
+import { DELAYED_TAB_CLOSE_TIME } from "@/shared/consts";
 import { clearLogs, debugLog } from "@/utils/log/backend";
 import { exportLogs, LogExportRange } from "@/utils/log/export";
 
@@ -48,28 +49,28 @@ async function handleClearLogs() {
 }
 
 const contextMenuDefs: Record<string, ContextMenuDefItem> = {
-  "export-log-1h": {
-    info: {
-      id: "export-log-1h",
-      title: "导出最近 1 小时日志",
-      type: "normal",
-      contexts: ["action"],
-    } satisfies CreateProperties,
-    handler(info: OnClickData) {
-      if (info.menuItemId != "export-log-1h") return;
-      void handleExportLog(LogExportRange.LastHour);
-    },
-  },
   "export-log-all": {
     info: {
       id: "export-log-all",
-      title: "导出全部日志（最近 24 小时）",
+      title: "导出全部日志（最近 1 小时）",
       type: "normal",
       contexts: ["action"],
     } satisfies CreateProperties,
     handler(info: OnClickData) {
       if (info.menuItemId != "export-log-all") return;
       void handleExportLog(LogExportRange.All);
+    },
+  },
+  "export-log-10min": {
+    info: {
+      id: "export-log-10min",
+      title: "导出最近 10 分钟日志",
+      type: "normal",
+      contexts: ["action"],
+    } satisfies CreateProperties,
+    handler(info: OnClickData) {
+      if (info.menuItemId != "export-log-10min") return;
+      void handleExportLog(LogExportRange.Last10Minutes);
     },
   },
   "clear-logs": {
@@ -133,7 +134,7 @@ const contextMenuDefs: Record<string, ContextMenuDefItem> = {
         });
       } finally {
         if (novelTab.id != null) {
-          await tabResMgr.releaseTab(novelTab.id);
+          await tabResMgr.releaseTab(novelTab.id, 3_000);
         }
       }
     },
