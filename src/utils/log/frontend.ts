@@ -7,12 +7,11 @@ import {
 import { buildLogEntry, LOG_PREFIX } from "@/utils/log/shared";
 
 function forwardLog(level: LogLevel, args: unknown[]): void {
-  const stack = new Error().stack ?? "";
   console[level](LOG_PREFIX, ...args);
   if (typeof window === "undefined" || !window.postMessage) return;
 
   const payload: DebugLogPayload = {
-    entry: buildLogEntry(level, args, stack, LogContext.Inject),
+    entry: buildLogEntry(level, args, LogContext.Inject),
   };
   window.postMessage({ type: MessageType.DebugLog, payload }, "*");
 }

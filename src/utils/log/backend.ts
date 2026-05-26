@@ -28,7 +28,9 @@ function toLocalStorageKey(key: string): StorageItemKey {
   return `local:${key}` as StorageItemKey;
 }
 
-async function trimLogEntries(maxEntries = LOG_MAX_ENTRIES): Promise<number> {
+export async function trimLogEntries(
+  maxEntries = LOG_MAX_ENTRIES,
+): Promise<number> {
   if (!hasExtensionStorage()) return 0;
   const snapshot = await storage.snapshot("local");
   const logItems = Object.entries(snapshot)
@@ -85,9 +87,8 @@ export function persistLogEntry(entry: LogEntry): void {
 }
 
 function writeDebugLog(level: LogLevel, args: unknown[]) {
-  const stack = new Error().stack ?? "";
   console[level](LOG_PREFIX, ...args);
-  persistLogEntry(buildLogEntry(level, args, stack, LogContext.Background));
+  persistLogEntry(buildLogEntry(level, args, LogContext.Background));
 }
 
 export async function clearLogs(): Promise<number> {

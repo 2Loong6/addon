@@ -32,6 +32,7 @@ export default defineConfig({
         "alarms",
         "cookies",
         "storage",
+        "unlimitedStorage",
         "webRequest",
         "declarativeNetRequest",
         "declarativeNetRequestWithHostAccess",

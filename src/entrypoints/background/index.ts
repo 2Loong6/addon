@@ -7,7 +7,7 @@ import {
 } from "@/rpc/types";
 import { dispatchCommand } from "@/rpc/web";
 import { IS_DEBUG } from "@/shared/consts";
-import { appendLogEntry, debugLog } from "@/utils/log/backend";
+import { appendLogEntry, debugLog, trimLogEntries } from "@/utils/log/backend";
 import { alarmListener } from "./alarm";
 import { redirectToAutoNovel } from "./redirect";
 import { addContextMenu, handleContextMenu } from "./context-menu";
@@ -112,6 +112,8 @@ export default defineBackground(() => {
     addContextMenu();
     browser.contextMenus.onClicked.addListener(handleContextMenu);
   }
+
+  trimLogEntries();
 
   browser.runtime.onInstalled.addListener(async () => {});
 

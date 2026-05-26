@@ -56,10 +56,8 @@ export interface LogEntry {
   isoTime: string;
   level: LogLevel;
   context: LogContext;
-  functionName: string;
   args: SerializableLogValue[];
   text: string;
-  stack: string;
   version: string;
 }
 

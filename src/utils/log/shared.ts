@@ -109,20 +109,17 @@ export function parseCaller(stack: string): string {
 export function buildLogEntry(
   level: LogLevel,
   args: unknown[],
-  stack = new Error().stack ?? "",
   context: LogContext,
 ): LogEntry {
   const timestamp = Date.now();
   return {
-    id: `${timestamp}-${crypto.randomUUID?.() ?? Math.random().toString(36).slice(2)}`,
+    id: `${timestamp}-${Math.random().toString(2)}`,
     timestamp,
     isoTime: formatUtc8Time(timestamp),
     level,
     context,
-    functionName: parseCaller(stack),
     args: args.map((arg) => serializeLogValue(arg)),
     text: formatLogText(args),
-    stack,
     version: VERSION,
   };
 }
