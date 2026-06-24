@@ -69,7 +69,26 @@ AutoNovel 开发阶段本地启动的 `pnpm dev` 站点，右键可以将主站�
 
 ### 移动端
 
-想在手机上安装插件翻译的朋友，可以试试 Kiwi、Yandex 等浏览器，安装步骤和 Chrome 类似，注意下载请到官网下载。
+想在手机上安装插件翻译的朋友，可以试试 `Firefox Nightly`
+
+> Kiwi、Yandex 等手机浏览器支持插件功能，安装步骤和 Chrome 类似，请到官网下载
+>
+> 但是，注意这些浏览器不在本仓库测试和支持范围内。不保证能用。
+
+#### Firefox (Android)
+
+Android 手机建议使用 [Firefox Nightly](https://play.google.com/store/apps/details?id=org.mozilla.fenix) 浏览器。
+
+- 从 [发布页](https://github.com/auto-novel/addon/releases/latest) 下载的`xpi文件` 
+
+- 打开`设置`点击`关于 Firefox Nightly`后`快速点击 Firefox 图标 5 次`，
+
+- 返回上一页点击 `从文件安装扩展`，选择下载的 `xpi 文件`
+
+>  之后新版本插件发布后，浏览器会自动更新插件。
+
+
+
 
 ## 如何测试插件是否工作
 
