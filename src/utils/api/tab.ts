@@ -227,6 +227,9 @@ export async function tab_http_fetch(
         func: injectedTabHttpFetch,
         args: [input, requestInit ?? null],
       });
+      if (!respSer) {
+        throw newError("tab_http_fetch returned null response");
+      }
       respSer.headers.push(["X-AutoNovelAddon-TabId", String(tab.id)]);
       return respSer;
     } catch (e) {
